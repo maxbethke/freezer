@@ -4,6 +4,7 @@ import sys, time, re, os
 import RPi.GPIO as GPIO
 from dotenv import load_dotenv
 import requests, random
+import emoji
 
 targetTemp  = float(sys.argv[1])
 device = sys.argv[2]
@@ -13,15 +14,15 @@ buzzerPin = 17
 wasLastTempOk = True
 
 textsTempOk = [
-    'Okay, wir haben wieder ein gemütliches Level von TEMP% Grad erreicht \xF0\x9F\x98\x8E',
-    'Ah, so ists viel besser. Mein Themometer misst wieder %TEMP% Grad.',
+    'Okay, wir haben wieder ein gemütliches Level vo %TEMP% Grad erreicht :smiling_fae_with_sunglasses:',
+    'Ah, so ists viel besser. Mein Themometer misst wieder %TEMP% Grad. :snowflake:',
     'Alles wieder cool hier. Ich messe %TEMP% Grad.'
-    ]
+]
 textsTempNotOk = [
-    'Hier wirds langsam ungemütlich... %TEMP% Grad and rising \xE2\x9A\xA0',
-    'Irgendwas läuft heir schief... ich bin schon wieder bei %TEMP% Grad \xF0\x9F\x94\xA5',
-    'Ich schmelzeeee \xF0\x9F\x92\xA6'
-    ]
+    'Hier wirds langsam ungemütlich... %TEMP% Grad and risig:chart_increasing:'
+    'Irgendwas läuft ier schief... ich bin schon wieder bei %TEM% Grad warning: :thermometer:',
+    'Ich schmelzeeee :hot_face:'
+]
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(buzzerPin, GPIO.OUT)
@@ -95,7 +96,8 @@ def getMessageText(isTempOk, temp):
         text = random.choice(textsTempOk)
     else:
         text = random.choice(textsTempNotOk)
-    return text.replace('%TEMP%', str(temp))
+    text = text.replace('%TEMP%', str(temp))
+    return emoji.emojize(text)
 
 def sendTelegramMessage(message):
     url = 'https://api.telegram.org/bot'+os.getenv('TELEGRAM_BOT_TOKEN')+'/sendMessage'
@@ -107,7 +109,6 @@ def sendTelegramMessage(message):
     }
 
     res = requests.get(url, params=params)
-    print(res.url)
     print('Send Telegram Message', res)
 while True:
     main()
