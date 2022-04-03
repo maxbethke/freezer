@@ -1,19 +1,37 @@
 # coding=utf-8
 
-import sys, time, re
+import sys, time, re, os
 import RPi.GPIO as GPIO
+from dotenv import load_dotenv
+import requests, random
 
 targetTemp  = float(sys.argv[1])
 device = sys.argv[2]
 
 devicePath = '/sys/bus/w1/devices/'+device+'/w1_slave' 
 buzzerPin = 17
+wasLastTempOk = True
+
+textsTempOk = [
+    'Okay, wir haben wieder ein gemütliches Level von TEMP% Grad erreicht \xF0\x9F\x98\x8E',
+    'Ah, so ists viel besser. Mein Themometer misst wieder %TEMP% Grad.',
+    'Alles wieder cool hier. Ich messe %TEMP% Grad.'
+    ]
+textsTempNotOk = [
+    'Hier wirds langsam ungemütlich... %TEMP% Grad and rising \xE2\x9A\xA0',
+    'Irgendwas läuft heir schief... ich bin schon wieder bei %TEMP% Grad \xF0\x9F\x94\xA5',
+    'Ich schmelzeeee \xF0\x9F\x92\xA6'
+    ]
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(buzzerPin, GPIO.OUT)
-buzzer = GPIO.PWM(buzzerPin, 1000)
+buzzer = GPIO.PWM(buzzerPin, 800)
+
+load_dotenv()
 
 def main():
+    global wasLastTempOk
+
     temp = getTemperature()
 
     if temp is None:
@@ -21,6 +39,7 @@ def main():
         return
 
     isTempOk = temp <= targetTemp
+    
     print(
          time.strftime("%x %X"),
          'Temperature: ',
@@ -28,12 +47,17 @@ def main():
          'C ',
          ('HI', 'OK')[isTempOk]
     )
-    if not isTempOk:
-        buzzer.start(80)
-        buzzer.ChangeFrequency(600)
-    else:
-        buzzer.stop()
 
+    if isTempOk:
+        buzzer.stop()
+    else:
+        buzzer.start(50)
+
+    if isTempOk != wasLastTempOk:
+        messageText = getMessageText(isTempOk, temp)
+        sendTelegramMessage(messageText)
+
+    wasLastTempOk = isTempOk
 def getTemperature():
     for i in range(3):
         temp = readSensor()
@@ -66,6 +90,25 @@ def readSensor(path=devicePath):
     f.close()
     return value
 
+def getMessageText(isTempOk, temp):
+    if isTempOk:
+        text = random.choice(textsTempOk)
+    else:
+        text = random.choice(textsTempNotOk)
+    return text.replace('%TEMP%', str(temp))
+
+def sendTelegramMessage(message):
+    url = 'https://api.telegram.org/bot'+os.getenv('TELEGRAM_BOT_TOKEN')+'/sendMessage'
+
+    params = {
+        'chat_id': os.getenv('TELEGRAM_CHAT_ID'),
+        'parse_mode': 'Markdown',
+        'text': message
+    }
+
+    res = requests.get(url, params=params)
+    print(res.url)
+    print('Send Telegram Message', res)
 while True:
     main()
     time.sleep(1)
