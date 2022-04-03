@@ -1,11 +1,17 @@
 # coding=utf-8
 
 import sys, time, re
+import RPi.GPIO as GPIO
 
 targetTemp  = float(sys.argv[1])
 device = sys.argv[2]
 
 devicePath = '/sys/bus/w1/devices/'+device+'/w1_slave' 
+buzzerPin = 17
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(buzzerPin, GPIO.OUT)
+buzzer = GPIO.PWM(buzzerPin, 1000)
 
 def main():
     temp = getTemperature()
@@ -22,6 +28,11 @@ def main():
          'C ',
          ('HI', 'OK')[isTempOk]
     )
+    if not isTempOk:
+        buzzer.start(80)
+        buzzer.ChangeFrequency(600)
+    else:
+        buzzer.stop()
 
 def getTemperature():
     for i in range(3):
