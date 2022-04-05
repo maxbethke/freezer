@@ -8,6 +8,7 @@ I imagene it like this:
 * The Pi operates a telegram bot who would send messages to a group in the above events
  * This way I can easily add users to the bot, without hardcoding any numbers
 * the alerts can be silenced via sending a message in the telegram group
+* The Bot updates his status with the current temperature
 
 # How to use
 Check `/sys/bus/w1/devices/`directory. Every sensor that the sytems sees will be listed here as subdirectory.
