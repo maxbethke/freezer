@@ -9,10 +9,10 @@ I imagine it like this:
  * This way I can easily add users to the bot, without hardcoding any numbers
 * The alerts can be silenced via sending a message in the telegram group
 * The bot maintaines a pinned message with the current temperature in the group
-** unpin all messages
-** send new message with current temerature
-** save of that id persistently (in file)
-** from now on, update the message when a new temperature is read
+    * unpin all messages
+    * send new message with current temerature
+    * save of that id persistently (in file)
+    * from now on, update the message when a new temperature is read
 
 # How to use
 Check `/sys/bus/w1/devices/`directory. Every sensor that the sytems sees will be listed here as subdirectory.
