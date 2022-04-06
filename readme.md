@@ -11,7 +11,8 @@ I imagine it like this:
 * The bot maintaines a pinned message with the current temperature in the group
     * unpin all messages
     * send new message with current temerature
-    * save of that id persistently (in file)
+        * save of that id persistently (in file)
+    * pin that message
     * from now on, update the message when a new temperature is read
 
 # How to use
