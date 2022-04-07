@@ -5,13 +5,20 @@ import RPi.GPIO as GPIO
 from dotenv import load_dotenv
 import requests, random
 import emoji
+import time
+
+load_dotenv()
 
 targetTemp  = float(sys.argv[1])
 device = sys.argv[2]
+tempProcessInterval = int(sys.argv[3] or 60)
 
 devicePath = '/sys/bus/w1/devices/'+device+'/w1_slave' 
 buzzerPin = 17
+doorContactPin = 27
 wasLastTempOk = True
+lastTempTime = 0
+telegramApiUrl = 'https://api.telegram.org/bot'+os.getenv('TELEGRAM_BOT_TOKEN')
 
 textsTempOk = [
     'Okay, wir haben wieder ein gemütliches Level vo %TEMP% Grad erreicht :smiling_fae_with_sunglasses:',
@@ -28,15 +35,19 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(buzzerPin, GPIO.OUT)
 buzzer = GPIO.PWM(buzzerPin, 800)
 
-load_dotenv()
-
 def main():
+    if time.time()-lastTempTime > tempProcessInterval:
+        processTemperature()
+    processDoorContact()
+    
+def processTemperature():
     global wasLastTempOk
 
     temp = getTemperature()
 
     if temp is None:
         print('Can not get temperature')
+        sendTelegramMessage('Ich kann keine Temperatur mehr fühlen...')
         return
 
     isTempOk = temp <= targetTemp
@@ -49,6 +60,8 @@ def main():
          ('HI', 'OK')[isTempOk]
     )
 
+    setTelegramChatTitle('Kühlschrank :'+str(temp)+' Grad')
+
     if isTempOk:
         buzzer.stop()
     else:
@@ -59,11 +72,14 @@ def main():
         sendTelegramMessage(messageText)
 
     wasLastTempOk = isTempOk
+
+
 def getTemperature():
     for i in range(3):
         temp = readSensor()
         if isinstance(temp, float):
-            return temp
+            lastTempTime = time.time()
+            return round(temp, 1)
         time.sleep(1)
         print('Didnt get temp, retrying')
     print(time.strftime("%x %X"), temp)
@@ -87,7 +103,7 @@ def readSensor(path=devicePath):
         if m:
             value = float(m.group(2)) / 1000.0
     except IOError as e:
-        value = "Error reading "+path+": "+e
+        value = "Error reading "+path
     f.close()
     return value
 
@@ -100,7 +116,7 @@ def getMessageText(isTempOk, temp):
     return emoji.emojize(text)
 
 def sendTelegramMessage(message):
-    url = 'https://api.telegram.org/bot'+os.getenv('TELEGRAM_BOT_TOKEN')+'/sendMessage'
+    url = telegramApiUrl+'/sendMessage'
 
     params = {
         'chat_id': os.getenv('TELEGRAM_CHAT_ID'),
@@ -110,6 +126,20 @@ def sendTelegramMessage(message):
 
     res = requests.get(url, params=params)
     print('Send Telegram Message', res)
+
+def setTelegramChatTitle(title):
+    url = telegramApiUrl+'/setChatDescription'
+    
+    params = {
+        'chat_id': os.getenv('TELEGRAM_CHAT_ID'),
+        'title': title
+    }
+
+    requests.get(url, params=params)
+
+def processDoorContact():
+    return 'Not implemented yet'
+
 while True:
     main()
     time.sleep(1)
