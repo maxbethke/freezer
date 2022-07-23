@@ -1,11 +1,14 @@
 # coding=utf-8
 
+from sre_constants import SUCCESS
 import sys, time, re, os
 import RPi.GPIO as GPIO
 from dotenv import load_dotenv
 import requests, random
 import emoji
 import time
+import json
+from pprint import pprint
 
 load_dotenv()
 
@@ -19,6 +22,7 @@ doorContactPin = 27
 wasLastTempOk = True
 lastTempTime = 0
 telegramApiUrl = 'https://api.telegram.org/bot'+os.getenv('TELEGRAM_BOT_TOKEN')
+lastSendMessageId = None
 
 textsTempOk = [
     'Okay, wir haben wieder ein gemütliches Level vo %TEMP% Grad erreicht :smiling_fae_with_sunglasses:',
@@ -26,8 +30,8 @@ textsTempOk = [
     'Alles wieder cool hier. Ich messe %TEMP% Grad.'
 ]
 textsTempNotOk = [
-    'Hier wirds langsam ungemütlich... %TEMP% Grad and risig:chart_increasing:'
-    'Irgendwas läuft ier schief... ich bin schon wieder bei %TEM% Grad warning: :thermometer:',
+    'Hier wirds langsam ungemütlich... %TEMP% Grad and risig :chart_increasing:',
+    'Irgendwas läuft ier schief... ich bin schon wieder bei %TEMP% Grad :warning: :thermometer:',
     'Ich schmelzeeee :hot_face:'
 ]
 
@@ -125,7 +129,12 @@ def sendTelegramMessage(message):
     }
 
     res = requests.get(url, params=params)
-    print('Send Telegram Message', res)
+    res = json.loads(res._content)
+    
+    if bool(res['ok']):
+        return res['result']['message_id']
+    
+    return False
 
 def setTelegramChatTitle(title):
     url = telegramApiUrl+'/setChatDescription'
@@ -135,7 +144,7 @@ def setTelegramChatTitle(title):
         'title': title
     }
 
-    requests.get(url, params=params)
+    #pprint(vars(requests.post(url, params=params)))
 
 def processDoorContact():
     return 'Not implemented yet'
